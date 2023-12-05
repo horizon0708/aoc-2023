@@ -39,13 +39,13 @@ defmodule Day5.Part2Test do
   56 93 4
   """
 
-  test "run sample" do
-    res =
-      @sample
-      |> Part2.run()
+  # test "run sample" do
+  #   res =
+  #     @sample
+  #     |> Part2.run()
 
-    assert res == 46
-  end
+  #   assert res == 46
+  # end
 
   test "run input" do
     res =

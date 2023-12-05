@@ -1,11 +1,13 @@
 defmodule Day5.Part2 do
   @moduledoc """
 
+  #try 1
   Naive recursive ascending search fails to finishing within 1 min
   - I wonder if any of the paths overlap. If they don't overlap, no point caching the results.
   - lets try parallelising for now
 
-
+  #try 2
+  parallel
   """
 
   def run(input) do
@@ -15,17 +17,22 @@ defmodule Day5.Part2 do
       # oh yeah I reverse it later
       |> then(fn {seed, data} -> build_reversed_checker([seed | data]) end)
 
-    recursive_ascending_search(0, checker)
+    0..20
+    |> Enum.map(fn n -> n * 10_000 end)
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.map(fn [s, e] ->
+      Task.async(fn ->
+        recursive_ascending_search(s, e, checker)
+      end)
+    end)
+    |> Enum.map(&Task.await(&1, 50_000))
   end
 
-  def recursive_ascending_search(number, cb) do
-    case cb.(number) do
-      true ->
-        number
-
-      false ->
-        IO.puts(number)
-        recursive_ascending_search(number + 1, cb)
+  def recursive_ascending_search(number, limit, cb) do
+    cond do
+      number == limit -> nil
+      cb.(number) -> number
+      true -> recursive_ascending_search(number + 1, limit, cb)
     end
   end
 
