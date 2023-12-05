@@ -7,7 +7,10 @@ defmodule Day5.Part2 do
   - lets try parallelising for now
 
   #try 2
-  parallel
+  parallel processing is probably too slow as well
+  - lets check if mappings overlap
+
+
   """
 
   def run(input) do
@@ -17,8 +20,8 @@ defmodule Day5.Part2 do
       # oh yeah I reverse it later
       |> then(fn {seed, data} -> build_reversed_checker([seed | data]) end)
 
-    0..20
-    |> Enum.map(fn n -> n * 10_000 end)
+    0..10
+    |> Enum.map(fn n -> n * 20_000 end)
     |> Enum.chunk_every(2, 1, :discard)
     |> Enum.map(fn [s, e] ->
       Task.async(fn ->
@@ -30,9 +33,14 @@ defmodule Day5.Part2 do
 
   def recursive_ascending_search(number, limit, cb) do
     cond do
-      number == limit -> nil
-      cb.(number) -> number
-      true -> recursive_ascending_search(number + 1, limit, cb)
+      number == limit ->
+        nil
+
+      cb.(number) ->
+        number
+
+      true ->
+        recursive_ascending_search(number + 1, limit, cb)
     end
   end
 
