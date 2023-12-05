@@ -20,28 +20,41 @@ defmodule Day3Test do
   .664.598..
   """
 
+  @test """
+  .1
+  *.
+  """
+
+  @line ".............953.......*........................*....719....$......................473.....=...523......-.......723..................*......"
+  @line2 "....................571.......................720..........269...........885.............................902...........80...738..........975"
+
   test "start" do
-    # [l1, l2, l3, ""] = String.split(@input, "\n")
+    [l1, l2, l3, ""] = String.split(@input, "\n")
+    IO.inspect(length(String.codepoints(l2)))
 
-    @sample
-    |> String.split("\n")
-    |> Enum.chunk_every(2, 1)
-    |> Day3.run()
-    |> dbg(structs: false)
-
-    Day3.run_input()
-    |> dbg(structs: false)
-
-    # Day3.get_symbol_pos(l1)
+    # @sample
+    # |> String.split("\n")
+    # |> Enum.filter(fn
+    #   "" -> false
+    #   n -> true
+    # end)
+    # |> Enum.chunk_every(2, 1)
+    # |> Day3.run()
     # |> dbg(structs: false)
 
-    # hits =
-    #   Day3.get_symbol_pos(l2)
-    #   |> Day3.get_collision_area()
+    {res, []} =
+      Day3.run_input()
 
-    # # |> dbg(structs: false, charlists: :as_lists)
+    # |> dbg(structs: false)
 
-    # Day3.get_numbers(l2, hits)
-    # |> dbg(structs: false, charlists: :as_lists)
+    assert res == 512_794
+
+    #   @line
+    #   |> Day3.get_symbol_pos()
+    #   |> dbg()
+
+    #   @line2
+    #   |> Day3.get_symbol_pos()
+    #   |> dbg()
   end
 end

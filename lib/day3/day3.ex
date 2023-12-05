@@ -10,32 +10,23 @@ defmodule Day3 do
     |> Enum.reduce(
       {0, []},
       fn
-        [curr, next], {sum, prev_sym_pos} ->
-          cur_sym_pos =
-            get_symbol_pos(curr)
-
-          next_sym_pos = get_symbol_pos(next)
+        [curr | _] = lines, {sum, prev_sym_pos} when is_list(lines) ->
+          symbols =
+            lines
+            |> Enum.map(&get_symbol_pos/1)
 
           hits =
-            get_aggregate_collision_indexes([prev_sym_pos, cur_sym_pos, next_sym_pos])
+            symbols
+            |> then(&(&1 ++ prev_sym_pos))
+            |> Enum.map(&get_collision_indexes/1)
+            |> List.flatten()
+            |> Enum.uniq()
 
           new_sum =
             get_numbers(curr, hits)
             |> Enum.reduce(sum, fn n, acc -> n + acc end)
-            |> dbg
 
-          {new_sum, cur_sym_pos}
-
-        [curr], {sum, prev_sym_pos} ->
-          cur_sym_pos = get_symbol_pos(curr)
-          hits = get_aggregate_collision_indexes([prev_sym_pos, cur_sym_pos])
-
-          new_sum =
-            get_numbers(curr, hits)
-            |> Enum.reduce(sum, fn n, acc -> n + acc end)
-            |> dbg
-
-          {new_sum, cur_sym_pos}
+          {new_sum, Enum.at(symbols, 0)}
       end
     )
   end
@@ -45,28 +36,21 @@ defmodule Day3 do
     |> String.codepoints()
     |> Enum.with_index()
     |> Enum.filter(fn
-      {x, _} -> x != "." and x not in ~w(0 1 2 3 4 5 6 7 8 9)
+      {x, _} -> x != "." and x not in ~w(0 1 2 3 4 5 6 7 8 9) and x != "\n"
     end)
     |> Enum.map(fn
       {_, ind} -> ind
     end)
   end
 
-  def get_aggregate_collision_indexes(lists) do
-    lists
-    |> Enum.map(&get_collision_area/1)
-    |> List.flatten()
-    |> Enum.uniq()
-  end
-
-  def get_collision_area(symbols) when is_list(symbols) do
+  def get_collision_indexes(symbols) when is_list(symbols) do
     symbols
-    |> Enum.map(&get_collision_area/1)
+    |> Enum.map(&get_collision_indexes/1)
     |> List.flatten()
     |> Enum.uniq()
   end
 
-  def get_collision_area(symbol_pos) when is_integer(symbol_pos) do
+  def get_collision_indexes(symbol_pos) when is_integer(symbol_pos) do
     [symbol_pos - 1, symbol_pos, symbol_pos + 1]
   end
 
@@ -85,7 +69,7 @@ defmodule Day3 do
         _, [] ->
           {:cont, []}
 
-        # non-integer, emit number as chunk if they are adjacent. Clear acc.
+        # non-integer, emit number in acc as chunk if they are adjacent. Clear acc.
         _, acc ->
           if adj?(acc, hits) do
             {:cont, to_number!(acc), []}
@@ -93,7 +77,15 @@ defmodule Day3 do
             {:cont, []}
           end
       end,
-      fn acc -> {:cont, acc} end
+      fn acc ->
+        # dbg(acc)
+
+        if adj?(acc, hits) do
+          {:cont, to_number!(acc), []}
+        else
+          {:cont, []}
+        end
+      end
     )
   end
 
