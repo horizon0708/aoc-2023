@@ -9,6 +9,14 @@ defmodule Day5.Part2 do
   #try 2
   parallel processing is probably too slow as well
   - lets check if mappings overlap
+    - there seem to be no cache hit - which I suspected but wanted to check
+  - hmm I'm building checkers on every run... probably not very efficient
+   - turns out that doesn't change that much
+
+
+  I thought the code as it is was way too slow for some reason,
+  realised `build_parallel_checker` absoutely did NOT need to be parallel :joy:
+  It is way faster when its serial.
 
 
   """
@@ -20,8 +28,8 @@ defmodule Day5.Part2 do
       # oh yeah I reverse it later
       |> then(fn {seed, data} -> build_reversed_checker([seed | data]) end)
 
-    0..10
-    |> Enum.map(fn n -> n * 20_000 end)
+    1..10
+    |> Enum.map(fn n -> n * 100_000 end)
     |> Enum.chunk_every(2, 1, :discard)
     |> Enum.map(fn [s, e] ->
       Task.async(fn ->
@@ -100,36 +108,72 @@ defmodule Day5.Part2 do
   end
 
   def build_reversed_checker(parts) do
-    fn input ->
+    checkers =
       parts
       |> Enum.reverse()
+      |> Enum.with_index()
       |> Enum.map(&build_parallel_checker/1)
+
+    fn input ->
+      checkers
       |> Enum.reduce(input, fn callback, acc ->
         callback.(acc)
       end)
     end
   end
 
+  def check_cache(input, ref) do
+    case :ets.lookup(ref, input) do
+      [] ->
+        nil
+
+      [n | _] ->
+        IO.puts("cache hit!")
+        n
+    end
+  end
+
+  def add_to_cache(input, output, ref) do
+    :ets.insert(ref, {input, output})
+  end
+
+  defp table_name(ind), do: String.to_atom("stage-#{ind}")
+
   # build checker that runs all checkers in parallel and returns one value
   # or value as is if there is none
-  def build_parallel_checker(maps) when is_list(maps) do
-    fn input ->
+  def build_parallel_checker({maps, ind}) when is_list(maps) do
+    # build ets per stage as a cache
+    ref = :ets.new(table_name(ind), [:public])
+
+    checkers =
       maps
       |> Enum.map(&build_checker/1)
-      |> Enum.map(fn callback ->
-        Task.async(fn -> callback.(input) end)
-      end)
-      |> Enum.map(&Task.await/1)
-      # |> IO.inspect(charlists: :as_lists)
-      |> Enum.filter(&(not is_nil(&1)))
-      |> case do
-        [n] -> n
-        _ -> input
+
+    fn input ->
+      cr = check_cache(input, ref)
+
+      if not is_nil(cr) do
+        cr
+      else
+        checkers
+        |> Enum.map(fn callback -> callback.(input) end)
+        # |> Enum.map(fn callback ->
+        #   Task.async(fn -> callback.(input) end)
+        # end)
+        # |> Enum.map(&Task.await/1)
+        # |> IO.inspect(charlists: :as_lists)
+        |> Enum.filter(&(not is_nil(&1)))
+        |> case do
+          [n] -> n
+          _ -> input
+        end
+
+        # |> tap(fn output -> add_to_cache(input, output, ref) end)
       end
     end
   end
 
-  def build_parallel_checker(callback), do: callback
+  def build_parallel_checker({callback, _ind}), do: callback
 
   def build_checker({a, b, n}) do
     fn
