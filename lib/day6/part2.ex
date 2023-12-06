@@ -15,6 +15,8 @@ defmodule Day6.Part2 do
     race = Keyword.get(opts, :race)
     search_for = Keyword.get(opts, :search_for)
     step = Keyword.get(opts, :step)
+
+    # this shouldn't happen depending on results but I cbf
     new_step = max(floor(step / 2), 1)
 
     opts = Keyword.put(opts, :step, new_step)
