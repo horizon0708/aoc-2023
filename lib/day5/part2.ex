@@ -13,9 +13,9 @@ defmodule Day5.Part2 do
   - hmm I'm building checkers on every run... probably not very efficient
    - turns out that doesn't change that much
 
-
   I thought the code as it is was way too slow for some reason,
   realised `build_parallel_checker` absoutely did NOT need to be parallel :joy:
+  (neither does build_seed_checker 40s -> 5s)
 
   #try 3
   hmm maybe lets search first for a approximate value and go down from there.
@@ -96,10 +96,12 @@ defmodule Day5.Part2 do
 
     fn input ->
       checkers
-      |> Enum.map(fn callback ->
-        Task.async(fn -> callback.(input) end)
-      end)
-      |> Enum.map(&Task.await/1)
+      # Note to self: don't ever do this again
+      # |> Enum.map(fn callback ->
+      #   Task.async(fn -> callback.(input) end)
+      # end)
+      # |> Enum.map(&Task.await/1)
+      |> Enum.map(fn callback -> callback.(input) end)
       |> Enum.any?()
     end
   end
