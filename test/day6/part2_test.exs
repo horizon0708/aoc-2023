@@ -12,6 +12,7 @@ defmodule Day6.Part2Test do
     n =
       @input
       |> Part2.run()
+      |> IO.inspect()
 
     # 20537782
   end

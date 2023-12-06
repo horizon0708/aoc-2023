@@ -5,58 +5,60 @@ defmodule Day6.Part2 do
       step: floor(time / 2)
     ]
 
-    upper_bound = search_boundary(0, nil, Keyword.put(opts, :direction, :upper))
-    lower_bound = search_boundary(time, nil, Keyword.put(opts, :direction, :lower))
+    upper_bound = search_boundary(nil, 0, Keyword.put(opts, :search_for, :upper))
+    lower_bound = search_boundary(nil, time, Keyword.put(opts, :search_for, :lower))
 
     upper_bound - lower_bound + 1
   end
 
-  def search_boundary(curr, {won?, prev}, opts) do
+  def search_boundary({won?, prev}, curr, opts) do
     race = Keyword.get(opts, :race)
-    direction = Keyword.get(opts, :direction, :lower)
+    search_for = Keyword.get(opts, :search_for)
     step = Keyword.get(opts, :step)
     new_step = max(floor(step / 2), 1)
 
     opts = Keyword.put(opts, :step, new_step)
 
     case {won?, wins?(curr, race), curr - prev} do
-      {true, false, 1} when direction == :upper -> prev
-      {true, false, -1} when direction == :lower -> prev
-      {p, cw, _} -> {cw, build_move(p, cw, direction)}
-    end
-    |> case do
-      {cw, op} -> search_boundary(op.(curr, new_step), {cw, curr}, opts)
-      el -> el
+      {true, false, 1} when search_for == :upper ->
+        prev
+
+      {true, false, -1} when search_for == :lower ->
+        prev
+
+      {pw, cw, _} ->
+        direction = get_direction(pw, pw, search_for)
+        search_boundary({cw, curr}, curr + new_step * direction, opts)
     end
   end
 
-  def search_boundary(curr, nil, opts) do
+  def search_boundary(nil, curr, opts) do
     race = Keyword.get(opts, :race)
-    direction = Keyword.get(opts, :direction, :lower)
+    search_for = Keyword.get(opts, :search_for, :lower)
     step = Keyword.get(opts, :step)
+    curr_result = wins?(curr, race)
 
-    case direction do
-      :lower -> search_boundary(curr - step, {wins?(curr, race), curr}, opts)
-      :upper -> search_boundary(curr + step, {wins?(curr, race), curr}, opts)
+    case search_for do
+      :lower -> search_boundary({curr_result, curr}, curr - step, opts)
+      :upper -> search_boundary({curr_result, curr}, curr + step, opts)
     end
   end
 
-  def build_move(prev, curr, search_direction) do
+  def get_direction(prev, curr, search_for) do
     # movement based finding lower bound
-    up? =
-      case {prev, curr} do
-        {true, true} -> false
-        {true, false} -> true
-        {false, true} -> false
-        {false, false} -> true
-      end
-
-    up? = if search_direction == :upper, do: not up?, else: up?
-
-    case up? do
-      true -> &Kernel.+/2
-      false -> &Kernel.-/2
+    case {prev, curr} do
+      {true, true} -> -1
+      {true, false} -> 1
+      {false, true} -> -1
+      {false, false} -> 1
     end
+    |> then(fn direction ->
+      # flip for upper bound
+      case search_for do
+        :upper -> direction * -1
+        :lower -> direction
+      end
+    end)
   end
 
   def wins?(speed, {time, distance}) do
