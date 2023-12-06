@@ -3,7 +3,7 @@ defmodule Day5.Part2 do
 
   #try 1
   Naive recursive ascending search fails to finishing within 1 min
-  - I wonder if any of the paths overlap. If they don't overlap, no point caching the results.
+  - For caching: I wonder if any of the paths overlap. If they don't overlap, no point caching the results.
   - lets try parallelising for now
 
   #try 2
@@ -16,9 +16,26 @@ defmodule Day5.Part2 do
 
   I thought the code as it is was way too slow for some reason,
   realised `build_parallel_checker` absoutely did NOT need to be parallel :joy:
-  It is way faster when its serial.
 
+  #try 3
+  hmm maybe lets search first for a approximate value and go down from there.
+  Instead of incrementing by 1, increment by 10000
 
+  increment | value
+  --- | ---
+  10000 | 50720000
+  1000  | 50717000
+
+  Now lets change the starting point to 50_000_000
+  then try make the increment finer
+
+  increment | value
+  --- | ---
+  100 | 50716500
+  10  | 50716420
+  1  | 50716416
+
+  got it! :D
   """
 
   def run(input) do
@@ -28,15 +45,17 @@ defmodule Day5.Part2 do
       # oh yeah I reverse it later
       |> then(fn {seed, data} -> build_reversed_checker([seed | data]) end)
 
-    1..10
-    |> Enum.map(fn n -> n * 100_000 end)
-    |> Enum.chunk_every(2, 1, :discard)
-    |> Enum.map(fn [s, e] ->
-      Task.async(fn ->
-        recursive_ascending_search(s, e, checker)
-      end)
-    end)
-    |> Enum.map(&Task.await(&1, 50_000))
+    # 50..61
+    # |> Enum.map(fn n -> n * 500_000 end)
+    # |> Enum.chunk_every(2, 1, :discard)
+    # |> Enum.map(fn [s, e] ->
+    #   Task.async(fn ->
+    #     recursive_ascending_search(s, e, checker)
+    #   end)
+    # end)
+    # |> Enum.map(&Task.await(&1, 50_000))
+
+    recursive_ascending_search(50_000_000, 50_000_000 * 10, checker)
   end
 
   def recursive_ascending_search(number, limit, cb) do
@@ -122,54 +141,30 @@ defmodule Day5.Part2 do
     end
   end
 
-  def check_cache(input, ref) do
-    case :ets.lookup(ref, input) do
-      [] ->
-        nil
-
-      [n | _] ->
-        IO.puts("cache hit!")
-        n
-    end
-  end
-
-  def add_to_cache(input, output, ref) do
-    :ets.insert(ref, {input, output})
-  end
-
-  defp table_name(ind), do: String.to_atom("stage-#{ind}")
-
   # build checker that runs all checkers in parallel and returns one value
   # or value as is if there is none
-  def build_parallel_checker({maps, ind}) when is_list(maps) do
+  def build_parallel_checker({maps, _ind}) when is_list(maps) do
     # build ets per stage as a cache
-    ref = :ets.new(table_name(ind), [:public])
 
     checkers =
       maps
       |> Enum.map(&build_checker/1)
 
     fn input ->
-      cr = check_cache(input, ref)
-
-      if not is_nil(cr) do
-        cr
-      else
-        checkers
-        |> Enum.map(fn callback -> callback.(input) end)
-        # |> Enum.map(fn callback ->
-        #   Task.async(fn -> callback.(input) end)
-        # end)
-        # |> Enum.map(&Task.await/1)
-        # |> IO.inspect(charlists: :as_lists)
-        |> Enum.filter(&(not is_nil(&1)))
-        |> case do
-          [n] -> n
-          _ -> input
-        end
-
-        # |> tap(fn output -> add_to_cache(input, output, ref) end)
+      checkers
+      |> Enum.map(fn callback -> callback.(input) end)
+      # |> Enum.map(fn callback ->
+      #   Task.async(fn -> callback.(input) end)
+      # end)
+      # |> Enum.map(&Task.await/1)
+      # |> IO.inspect(charlists: :as_lists)
+      |> Enum.filter(&(not is_nil(&1)))
+      |> case do
+        [n] -> n
+        _ -> input
       end
+
+      # |> tap(fn output -> add_to_cache(input, output, ref) end)
     end
   end
 
