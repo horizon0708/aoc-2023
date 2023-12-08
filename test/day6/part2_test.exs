@@ -7,7 +7,6 @@ defmodule Day6.Part2Test do
   @sample {71530, 940_200}
   @input {35_696_887, 213_116_810_861_248}
 
-  @tag :wip
   test "input run" do
     n =
       @input
@@ -17,7 +16,6 @@ defmodule Day6.Part2Test do
     # 20537782
   end
 
-  @tag :wip
   test "sample run" do
     n =
       @sample
