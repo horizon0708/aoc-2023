@@ -19,7 +19,6 @@ end
 
 defmodule Day7.Part2.Rule do
   def sort(hands) do
-    # lol
     hands
     |> Enum.sort_by(fn x -> x end, fn {a_type, a_hands, _}, {b_type, b_hands, _} ->
       if a_type == b_type do
