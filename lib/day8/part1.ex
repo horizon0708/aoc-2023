@@ -19,6 +19,7 @@ defmodule Day8.Part1 do
     }
   end
 
+  @spec navigate(any(), integer(), number(), any(), map()) :: number()
   def navigate(curr, ind, step, instruction, map) do
     {l, r} = Map.get(map, curr)
 
