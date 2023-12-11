@@ -18,6 +18,6 @@ defmodule Day10.Part2Test do
   test "simple" do
     @simple
     |> Part2.find_loop()
-    |> IO.inspect()
+    |> IO.inspect(charlists: :as_list)
   end
 end
