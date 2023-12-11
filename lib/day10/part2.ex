@@ -6,12 +6,16 @@ defmodule Day10.Part2 do
 
     {x, y} =
       find_starting_point(d_map)
-      |> IO.inspect()
 
+    # brute force the loop
     loop =
       d_map
       |> get_all_branching_pipes(x, y, [])
-      |> List.flatten()
+      |> Enum.map(fn x ->
+        x
+        |> List.flatten()
+        |> Enum.at(0)
+      end)
       |> Enum.uniq()
       |> Enum.map(fn x ->
         x
@@ -19,33 +23,40 @@ defmodule Day10.Part2 do
       end)
       |> Enum.max_by(&length/1)
 
-    # IO.inspect(loop)
-    # print(d_map, loop)
-    s = determine_starting_tile(loop, {x, y})
+    # get what the S tile is meant to be (in this case its "|")
+    s = determine_starting_tile(d_map, loop, {x, y})
 
+    # and replace that tile so its easy to follow
     d_map = replace_at(d_map, s, {x, y})
 
-    al =
-      loop
-      |> Enum.map(fn pos -> {pos, nil} end)
+    # find the first (most top-left) F in the loop
+    {sx, sy} = find_first_marker(d_map, "F", loop) |> IO.inspect()
 
+    # traverse the loop from in clockwise, and add all points that we know are in the loop
     points =
-      annotate_orientation(al, d_map, {2, 1}, {2, 1}, :right)
+      trav_cw_and_add_insides(loop, d_map, {sx + 1, sy}, {sx + 1, sy}, :right)
       |> Enum.uniq()
 
     MapSet.new(points)
     |> MapSet.difference(MapSet.new(loop))
+    # once we get all the points, we "fill" from those points
+    |> Enum.reduce([], fn x, acc ->
+      (acc ++ get_area(x, loop, acc))
+      |> List.flatten()
+      |> Enum.uniq()
+    end)
+    |> length
   end
 
-  def print(d_map) do
-    d_map
-    # |> Enum.reduce(d_map, fn el, acc ->
-    #   replace_at(acc, d_map, el)
-    # end)
-    |> Enum.map(fn {row, _} ->
-      row
-      |> Enum.map(fn {col, _} -> col end)
-    end)
+  def get_area({x, y} = pos, l, area \\ []) do
+    if pos in area or pos in l do
+      area
+    else
+      area = area ++ [pos]
+
+      get_adj_pos(x, y)
+      |> Enum.reduce(area, fn xp, acc -> get_area(xp, l, acc) end)
+    end
   end
 
   def replace_at(map, t, {x, y}) when is_binary(t) do
@@ -83,13 +94,27 @@ defmodule Day10.Part2 do
     |> Enum.with_index()
   end
 
-  def find_starting_point(d_map) do
+  def find_starting_point(d_map, marker \\ "S") do
     d_map
     |> Enum.reduce(nil, fn {row, row_ind}, acc ->
-      case Enum.find(row, fn {col, _} -> col === "S" end) do
-        {_, col_ind} -> {row_ind, col_ind}
+      case Enum.find(row, fn {col, _} -> col === marker end) do
+        {_, col_ind} -> {col_ind, row_ind}
         _ -> acc
       end
+    end)
+  end
+
+  def find_first_marker(d_map, marker, loop) do
+    d_map
+    |> Enum.reduce(nil, fn
+      {row, row_ind}, nil ->
+        case Enum.find(row, fn {col, col_ind} -> col === marker and {col_ind, row_ind} in loop end) do
+          {_, col_ind} -> {col_ind, row_ind}
+          _ -> nil
+        end
+
+      _, acc ->
+        acc
     end)
   end
 
@@ -109,7 +134,19 @@ defmodule Day10.Part2 do
     end)
   end
 
-  # def get_elligible_neighbors(d_map, {})
+  def get_adj_pos(x, y) do
+    left = max(x - 1, 0)
+    up = max(y - 1, 0)
+    right = x + 1
+    down = y + 1
+
+    [
+      {left, y},
+      {right, y},
+      {x, up},
+      {x, down}
+    ]
+  end
 
   def get_possible_positions([{row, _} | _] = d_map, x, y) do
     max_y = length(d_map)
@@ -193,13 +230,17 @@ defmodule Day10.Part2 do
     end
   end
 
-  def determine_starting_tile(loop, {x, y}) do
+  def determine_starting_tile(d_map, loop, {x, y}) do
+    adj_pos =
+      get_possible_positions(d_map, x, y)
+      |> MapSet.new()
+      |> MapSet.intersection(MapSet.new(loop))
+      |> MapSet.to_list()
+
     dir =
-      loop
+      adj_pos
       |> Enum.map(fn {ex, ey} -> {ex - x, ey - y} end)
-      |> Enum.filter(fn {rx, ry} ->
-        {rx, ry} in [{1, 0}, {0, 1}, {-1, 0}, {0, -1}]
-      end)
+      |> IO.inspect(charlists: :as_list)
       |> Enum.map(fn
         {1, 0} -> {:right, 3}
         {-1, 0} -> {:left, 2}
@@ -210,21 +251,32 @@ defmodule Day10.Part2 do
       |> Enum.map(fn {dir, _} -> dir end)
 
     cond do
-      dir == [:down, :right] -> "F"
-      dir == [:up, :right] -> "L"
-      dir == [:down, :left] -> "7"
-      dir == [:up, :left] -> "J"
-      dir == [:left, :right] -> "-"
-      dir == [:up, :down] -> "|"
+      dir == [:down, :right] ->
+        "F"
+
+      dir == [:up, :right] ->
+        "L"
+
+      dir == [:down, :left] ->
+        "7"
+
+      dir == [:up, :left] ->
+        "J"
+
+      dir == [:left, :right] ->
+        "-"
+
+      dir == [:up, :down] ->
+        "|"
+
+      true ->
+        IO.inspect({dir, {x, y}})
+        raise "???"
     end
   end
 
-  # def annotate_orientation(loop, start) do
-  #   # assume start is top left corner
-  # end
-
   # go clockwise
-  def annotate_orientation(loop, d_map, curr, start, direction, points \\ []) do
+  def trav_cw_and_add_insides(loop, d_map, curr, start, direction, points \\ []) do
     next_direction = get_next_direction(curr, d_map, direction)
     points = points ++ get_inside_positions(curr, direction, next_direction)
     next_pos = get_next_pos(curr, next_direction)
@@ -234,7 +286,7 @@ defmodule Day10.Part2 do
         points
 
       true ->
-        annotate_orientation(
+        trav_cw_and_add_insides(
           loop,
           d_map,
           next_pos,
@@ -246,10 +298,8 @@ defmodule Day10.Part2 do
   end
 
   def get_next_direction(pos, d_map, direction) do
-    # dbg(binding())
     tile =
       get_tile_at(d_map, pos)
-      |> IO.inspect()
 
     tile
     |> case do
@@ -343,62 +393,5 @@ defmodule Day10.Part2 do
       :down -> {x, y + 1}
       :left -> {x - 1, y}
     end
-  end
-
-  def next_pos({x, y}, d_map, last_corner) do
-    # IO.inspect({x, y})
-
-    case {last_corner, get_tile_at(d_map, {x, y})} do
-      # F
-      # enter from right
-      {l, "F"} when l in ["J", "7"] -> {x, y - 1}
-      # enter from down
-      {_, "F"} -> {x + 1, y}
-      # 7
-      # enter from left
-      {l, "7"} when l in ["L", "F"] -> {x, y + 1}
-      # enter from down
-      {_, "7"} -> {x - 1, y}
-      # J
-      # enter from top
-      {l, "J"} when l in ["7"] -> {x - 1, y}
-      # enter from left
-      {_, "J"} -> {x, y - 1}
-      # L
-      # enter from top
-      {l, "L"} when l in ["F", "7"] -> {x + 1, y}
-      # enter from right
-      {_, "L"} -> {x, y - 1}
-      # straight
-      {"7", "-"} -> {x - 1, y}
-      {"L", "-"} -> {x + 1, y}
-      {"J", "-"} -> {x - 1, y}
-      {"F", "-"} -> {x + 1, y}
-      {"7", "|"} -> {x, y + 1}
-      {"L", "|"} -> {x, y - 1}
-      {"J", "|"} -> {x, y - 1}
-      {"F", "|"} -> {x, y + 1}
-    end
-    |> IO.inspect()
-  end
-
-  def loop_annotated?(loop) do
-    loop
-    |> Enum.all?(fn {_pos, ann} -> not is_nil(ann) end)
-  end
-
-  # {:top | :bottom, :left | :right}
-  def annotate_boundary_at(loop, {x, y}, boundary) do
-    loop
-    |> Enum.map(fn {{lx, ly}, _} = el ->
-      if(lx == x and ly == y) do
-        {{lx, ly}, boundary}
-      else
-        el
-      end
-    end)
-  end
-
-  def inside_loop?(pos, loop) do
   end
 end

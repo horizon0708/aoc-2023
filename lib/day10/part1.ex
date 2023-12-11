@@ -6,17 +6,25 @@ defmodule Day10.Part1 do
 
     {x, y} = find_starting_point(d_map)
 
-    d_map
-    |> get_all_branching_pipes(x, y, [])
-    |> List.flatten()
-    |> Enum.uniq()
-    |> Enum.map(fn x ->
-      x
-      |> Enum.to_list()
-      |> length()
-    end)
-    |> Enum.max()
-    |> then(&Utils.to_integer!(inspect(&1 / 2)))
+    loop =
+      d_map
+      |> get_all_branching_pipes(x, y, [])
+      |> List.flatten()
+      |> Enum.uniq()
+
+    answer =
+      loop
+      |> Enum.map(fn x ->
+        x
+        |> Enum.to_list()
+        |> length()
+      end)
+      |> Enum.max()
+      |> then(&Utils.to_integer!(inspect(&1 / 2)))
+
+    # File.write!("./lib/day10/loop.txt", inspect(Enum.to_list(loop)))
+
+    answer
   end
 
   def to_2d_array(text) do
