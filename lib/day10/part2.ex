@@ -35,7 +35,6 @@ defmodule Day10.Part2 do
     # traverse the loop from in clockwise, and add all points that we know are in the loop
     points =
       trav_cw_and_add_insides(loop, d_map, {sx + 1, sy}, {sx + 1, sy}, :right)
-      |> Enum.uniq()
 
     MapSet.new(points)
     |> MapSet.difference(MapSet.new(loop))
